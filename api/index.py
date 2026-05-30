@@ -29,7 +29,7 @@ def query_station(code):
             'sign': 'fake'
         }).encode('utf-8')
         req = urllib.request.Request(CHARGER_API, data=body, headers={'Content-Type': 'application/json;charset=UTF-8'})
-        resp = urllib.request.urlopen(req, timeout=10)
+        resp = urllib.request.urlopen(req, timeout=6)
         result = json.loads(resp.read())
         if result.get('code') == 200 and isinstance(result.get('data'), list) and len(result['data']) > 0:
             ports = result['data']
@@ -57,7 +57,7 @@ class handler(BaseHTTPRequestHandler):
 
         if path == '' or path == '/':
             self.send_response(200)
-            for k, v in headers.items():
+            for k, v in headers:
                 self.send_header(k, v)
             self.end_headers()
             self.wfile.write(json.dumps({'status': 'ok', 'service': 'stu-charger-proxy'}).encode())
@@ -65,7 +65,8 @@ class handler(BaseHTTPRequestHandler):
 
         if path == '/all':
             try:
-                with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                # 全部并发查询，max_workers=13 一次跑完
+                with concurrent.futures.ThreadPoolExecutor(max_workers=13) as executor:
                     results = list(executor.map(query_station, STU_STATIONS))
                 valid = [r for r in results if r is not None]
                 self.send_response(200)
